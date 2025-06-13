@@ -2,7 +2,7 @@
 
 kelompok : B10
 
-**1. Latar Belakang & Permasalahan Nyata di Dunia**
+## **1. Latar Belakang & Permasalahan Nyata di Dunia**
    
 Di era digital saat ini, jumlah buku yang tersedia bagi pembaca, baik melalui platform e-commerce, perpustakaan digital, maupun toko buku online, sangatlah melimpah. Meskipun ini memberikan banyak pilihan, pembaca seringkali dihadapkan pada beberapa permasalahan nyata:
 - **Information Overload**: Terlalu banyak pilihan membuat pembaca kesulitan menemukan buku yang benar-benar sesuai dengan minat dan kebutuhan mereka. Proses pencarian bisa memakan waktu dan melelahkan.
@@ -12,7 +12,7 @@ Di era digital saat ini, jumlah buku yang tersedia bagi pembaca, baik melalui pl
   
 Permasalahan ini tidak hanya merugikan pembaca yang kehilangan kesempatan menemukan bacaan berkualitas, tetapi juga merugikan penulis, penerbit, dan platform penyedia buku karena potensi pasar yang tidak tergali maksimal.
 
-**2. Solusi yang Ditawarkan: Sistem Rekomendasi Buku Personal**
+## **2. Solusi yang Ditawarkan: Sistem Rekomendasi Buku Personal**
 
 Untuk mengatasi permasalahan di atas, proyek ini mengusulkan pengembangan sebuah prototipe **sistem rekomendasi buku yang lebih personal dan cerdas**. Solusi ini bertujuan untuk:
 - Menganalisis preferensi individual pengguna berdasarkan histori interaksi mereka (misalnya, rating yang diberikan, buku yang pernah dibaca/dilihat).
@@ -22,7 +22,9 @@ Untuk mengatasi permasalahan di atas, proyek ini mengusulkan pengembangan sebuah
 
 Proyek ini akan mengimplementasikan alur data dari ingesti, pemrosesan, feature engineering, pelatihan model, hingga penyajian rekomendasi, dengan mensimulasikan pendekatan Data Lakehouse sederhana menggunakan teknologi yang mudah diakses dan diimplementasikan.
 
-**3. Arsitektur Sistem yang Digunakan**
+## **3. Arsitektur Sistem yang Digunakan**
+
+![image](https://github.com/user-attachments/assets/5b7a3aa3-e3b1-4cda-b195-e307962c537e)
 
 Arsitektur yang akan kita gunakan adalah versi sederhana yang fokus pada kemudahan implementasi, dengan MinIO sebagai pusat penyimpanan data dan Python beserta library-nya sebagai alat utama pemrosesan dan pengembangan model.
 
