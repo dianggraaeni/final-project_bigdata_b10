@@ -71,7 +71,7 @@ fp-bugdata/
 ![Screenshot 2025-06-12 194927](https://github.com/user-attachments/assets/76eba1ce-6563-408a-a02e-65a4f4fd9e41)  
 *   **Output:** 10 file CSV batch di MinIO Bronze Layer.
 
-### Tahap 2: ETL Bronze ke Silver & Feature Engineering ke Gold (Orang 1 & 2)
+### Tahap 2: ETL Bronze ke Silver & Feature Engineering ke Gold (Orang 2)
 *   **Tujuan:** Membersihkan dan mentransformasi data dari Bronze, menyimpannya ke Silver, lalu membuat fitur yang siap digunakan model dan menyimpannya ke Gold.
 *   **Proses Preprocessing (ETL Bronze ke Silver - `src/preprocess/etl_bronze_to_silver.py`):**
     1.  **Extract:** Membaca semua 10 file batch CSV dari `bronze-layer/streaming_batches/` di MinIO.
