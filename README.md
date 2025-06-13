@@ -1,6 +1,14 @@
 # FINAL PROJECT BIG DATA
 
-kelompok : B10
+KELOMPOK : B10
+
+|           Nama               |     NRP    |
+|            --                |     --     |
+| Riakiyatul Nur Oktarani      | 5027231013 |
+| Dian Anggraeni Putri         | 5027231016 |
+| Acintya Edria Sudarsono      | 5027231020 |
+|Tsaldia Hukma Cita            | 5027231036 |
+| Calista Meyra Azizah         | 5027231060 |
 
 ## **1. Latar Belakang & Permasalahan Nyata di Dunia**
    
