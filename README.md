@@ -33,183 +33,337 @@ Seluruh proses ini didukung oleh arsitektur Data Lakehouse sederhana menggunakan
 
 ## 4. Struktur Direktori Proyek
 ```
-fp-bugdata/
+final-project-data-lakehouse/
+├── .git/
 ├── .gitignore
-├── README.md
 ├── docker-compose.yml
+├── start_project.sh # (Contoh script utama untuk orkestrasi semua)
+├── start_infra_ingestion.sh # Script untuk Orang 1
+├── process_data_pipeline.sh # Script untuk Orang 2
+├── train_model_pipeline.sh # Script untuk Orang 3
+├── start_api_streamlit.sh # Script untuk Orang 4 (dev lokal)
+│
 ├── data/
-│ ├── processed/ # Sampel data gabungan siap untuk MinIO
-│ │ └── final_book_data_sample_20k.csv
-│ └── minio_data/ # Volume mapping MinIO (Bronze, Silver, Gold)
+│ └── raw/
+│ ├── books_dataset.csv
+│ └── unstructured/
+│ |  ├── images/
+│ |  ├── videos/
+│ |  └── audios/
+│
 ├── src/
-│ ├── ingest/
-│ │ └── ingest_to_bronze_streaming_batch.py
-│ ├── preprocess/
-│ │ ├── etl_bronze_to_silver.py
-│ │ └── feature_engineering.py
+│ ├── init.py
+│ ├── ingestion/
+│ │ ├── init.py
+│ │ ├── kafka_producer_csv.py
+│ │ ├── kafka_producer_unstructured.py
+│ │ ├── kafka_consumer_csv_to_minio.py
+│ │ └── kafka_consumer_unstructured_metadata.py
+│ ├── processing/
+│ │ ├── init.py
+│ │ ├── run_data_processing.py
+│ │ ├── data_preprocessor.py
+│ │ ├── feature_engineering_price.py
+│ │ └── feature_engineering_recsys.py
 │ ├── training/
-│ │ └── train_recommender_models.py
+│ │ ├── init.py
+│ │ └── train_price_predictor.py
 │ ├── api/
+│ │ ├── init.py
+│ │ ├── main.py
+│ │ ├── schemas.py
+│ │ └── services/
+│ │ ├── init.py
+│ │ ├── prediction_service.py
+│ │ └── recommendation_service.py
+│ ├── streamlit_app/
 │ │ └── app.py
-│ ├── ui/ # (Akan diisi oleh Orang 5)
-│ │ └── app_ui.py
-└── requirements.txt
+│ └── utils/
+│ ├── init.py
+│ ├── config.py
+│ └── minio_helpers.py
+│
+├── frontend_web/
+│ ├── index.html
+│ ├── css/
+│ └── js/
+│
+├── models_local_backup/ # Backup model lokal dari training
+│
+├── Dockerfile.api # Dockerfile untuk API service (Orang 4/5)
+├── Dockerfile.streamlit # Dockerfile untuk Streamlit app (Orang 4/5)
+│
+├── requirements.txt
+└── README.md
 ```
 
+---
 
-## 5. Penjelasan Tahapan Proyek dan Pembagian Tugas
+## 2. Penjelasan File & Folder Utama
 
-### Tahap 1: Ingesti Data & Persiapan Bronze Layer (Orang 1)
-*   **Tujuan:** Memasukkan data sampel ke dalam sistem penyimpanan awal (MinIO Bronze Layer) dengan mensimulasikan data yang datang secara bertahap.
-*   **Proses (Batch Data):**
-    1.  **Setup MinIO Server:** MinIO dijalankan menggunakan Docker (dikendalikan via `docker-compose.yml`) untuk menyediakan object storage S3-compatible secara lokal. Bucket `bronze-layer`, `silver-layer`, dan `gold-layer` dibuat.
-    2.  **Skrip Ingesti (`src/ingest/ingest_to_bronze_streaming_batch.py`):**
-        *   Membaca file `data/processed/final_book_data_sample_20k.csv`.
-        *   Memecah dataset 20.000 baris tersebut menjadi 10 batch file CSV, masing-masing berisi 2.000 baris.
-        *   Setiap file batch diunggah secara terpisah ke `bronze-layer/streaming_batches/` di MinIO. Ini mensimulasikan data yang masuk secara berkala.
-![Screenshot 2025-06-12 194905](https://github.com/user-attachments/assets/f07a2271-09a3-4f8f-899c-37059f116b39)  
-![Screenshot 2025-06-12 194927](https://github.com/user-attachments/assets/76eba1ce-6563-408a-a02e-65a4f4fd9e41)  
-*   **Output:** 10 file CSV batch di MinIO Bronze Layer.
+*   **`docker-compose.yml`**: Mendefinisikan dan menjalankan service infrastruktur (Kafka, Zookeeper, MinIO) dan nantinya aplikasi (API, Streamlit) menggunakan Docker.
+*   **`start_*.sh`**: Kumpulan script Bash untuk menjalankan pipeline per tahap atau keseluruhan.
+*   **`data/raw/`**: Menyimpan dataset mentah lokal sebelum di-stream.
+    *   `books_dataset.csv`: Dataset utama buku.
+    *   `unstructured/`: Sampel file gambar, video, audio.
+*   **`src/`**: Berisi semua kode sumber Python aplikasi.
+    *   **`ingestion/`**: Modul untuk data ingestion (Kafka producers & consumers).
+    *   **`processing/`**: Modul untuk pemrosesan data, pembersihan, dan feature engineering. `run_data_processing.py` adalah entry point untuk tahap ini.
+    *   **`training/`**: Modul untuk melatih model machine learning. `train_price_predictor.py` adalah entry point.
+    *   **`api/`**: Kode untuk REST API service menggunakan FastAPI.
+        *   `main.py`: Aplikasi FastAPI utama, event startup, dan pendaftaran router (jika digunakan).
+        *   `schemas.py`: Model data Pydantic untuk validasi dan dokumentasi API.
+        *   `services/`: Logika bisnis inti (prediksi, rekomendasi) yang dipisahkan dari endpoint.
+        *   `routers/` (Opsional): Jika endpoint dipecah menjadi modul terpisah.
+    *   **`streamlit_app/`**: Kode untuk aplikasi UI sederhana menggunakan Streamlit. `app.py` adalah script utama.
+    *   **`utils/`**: Modul utilitas umum.
+        *   `config.py`: Menyimpan konfigurasi (nama bucket, file, dll.).
+        *   `minio_helpers.py`: Fungsi bantu untuk interaksi dengan MinIO.
+*   **`frontend_web/`**: (Untuk Orang 5) Kode sumber untuk antarmuka pengguna web yang lebih canggih.
+*   **`models_local_backup/`**: Tempat menyimpan salinan lokal dari model machine learning yang sudah dilatih.
+*   **`Dockerfile.api`, `Dockerfile.streamlit`**: (Untuk Orang 4/5) Instruksi untuk membangun image Docker untuk API dan aplikasi Streamlit.
+*   **`requirements.txt`**: Daftar semua library Python yang dibutuhkan oleh proyek.
+*   **`README.md`**: File ini. Dokumentasi utama proyek.
 
-### Tahap 2: ETL Bronze ke Silver & Feature Engineering ke Gold (Orang 2)
-*   **Tujuan:** Membersihkan dan mentransformasi data dari Bronze, menyimpannya ke Silver, lalu membuat fitur yang siap digunakan model dan menyimpannya ke Gold.
-*   **Proses Preprocessing (ETL Bronze ke Silver - `src/preprocess/etl_bronze_to_silver.py`):**
-    1.  **Extract:** Membaca semua 10 file batch CSV dari `bronze-layer/streaming_batches/` di MinIO.
-    2.  **Transform:**
-        *   Menggabungkan data dari semua batch menjadi satu DataFrame Pandas.
-        *   Melakukan pembersihan dasar: penyesuaian tipe data (numerik, datetime), penanganan nilai kosong (NaN) sederhana (mengisi string kosong), dan normalisasi teks dasar (lowercase, trim whitespace).
-    3.  **Load:** Menyimpan DataFrame hasil transformasi ke `silver-layer/` di MinIO sebagai satu file Parquet (`processed_book_data.parquet`) untuk efisiensi.
-![Screenshot 2025-06-12 213353](https://github.com/user-attachments/assets/cf5caab8-d6f8-4a79-8db6-97cbe673b041)  
+---
 
-*   **Proses Feature Engineering (Silver ke Gold - `src/preprocess/feature_engineering.py`):**
-    1.  **Input:** Membaca `processed_book_data.parquet` dari MinIO Silver Layer.
-    2.  **EDA Sederhana:** Melakukan analisis data eksploratif dasar untuk memahami karakteristik data.
-    3.  **Fitur Collaborative Filtering (CF):**
-        *   Membuat User-Item Interaction Matrix (sparse) dari `User_id`, `Id` (ASIN buku), dan `review/score`.
-        *   Menyimpan matriks ini (`user_item_interaction_matrix.npz`) dan mapping ID (`user_id_map.pkl`, `book_id_map_asin.pkl`) ke MinIO Gold Layer (`features/` dan `fitted_objects/`).
-    4.  **Fitur Content-Based Filtering (CBF):**
-        *   Menggabungkan teks dari `Title_rating`, `description`, `authors`, `categories`.
-        *   Membuat matriks TF-IDF dari gabungan teks tersebut.
-        *   Menyimpan matriks TF-IDF (`book_content_tfidf_matrix.npz`), objek `TfidfVectorizer` yang sudah di-fit (`tfidf_vectorizer.pkl`), dan daftar ID buku yang sesuai (`book_ids_for_tfidf_matrix.pkl`) ke MinIO Gold Layer.
-![Screenshot 2025-06-12 214333](https://github.com/user-attachments/assets/121a70e0-c076-48ce-82df-9bd67a2677ff)  
-![Screenshot 2025-06-12 214351](https://github.com/user-attachments/assets/589f6c21-7dd5-4655-85be-bfd1c06afd3a)
+## 3. Teknologi yang Digunakan
 
-*   **Output:** Data bersih di MinIO Silver Layer; fitur-fitur siap model dan objek pendukung di MinIO Gold Layer.
+*   **Bahasa Pemrograman Utama:** Python
+*   **Containerization:** Docker, Docker Compose
+*   **Streaming Data:** Apache Kafka
+*   **Data Lake Storage:** MinIO
+*   **Data Processing & ML:** Pandas, NumPy, Scikit-learn, Randomforest, NLTK
+*   **API Framework:** FastAPI
+*   **ASGI Server (untuk FastAPI):** Uvicorn
+*   **Simple Web UI:** Streamlit
+*   **Frontend Web (Orang 5):** HTML, CSS, JavaScript (Framework seperti React/Vue/Angular opsional
 
-### Tahap 3: Pelatihan Model (Orang 3)
-*   **Tujuan:** Menggunakan fitur dari Gold Layer untuk "melatih" atau membuat model/artefak rekomendasi.
-*   **Proses Pembuatan Model (`src/training/train_recommender_models.py`):**
-    1.  **Input:** Membaca fitur dan objek dari MinIO Gold Layer.
-    2.  **Model Collaborative Filtering (Item-Item Similarity):**
-        *   Menggunakan `user_item_interaction_matrix.npz`.
-        *   Menghitung matriks kemiripan kosinus antar item (buku) berdasarkan pola rating pengguna bersama.
-        *   Menyimpan matriks kemiripan item CF (`cf_item_item_similarity_matrix.npz`) dan daftar ID buku yang sesuai (`cf_book_id_map_for_similarity.pkl`) ke `gold-layer/models/`.
-    3.  **Model Content-Based Filtering (Book-Book Similarity):**
-        *   Menggunakan `book_content_tfidf_matrix.npz`. 
-        *   Menghitung matriks kemiripan kosinus antar buku berdasarkan vektor TF-IDF konten mereka.
-        *   Menyimpan matriks kemiripan konten CBF (`cbf_book_book_similarity_matrix.pkl`) dan daftar ID buku yang sesuai (`cbf_book_ids_for_similarity.pkl`) ke `gold-layer/models/`.
-    4.  **Evaluasi Kualitatif Sederhana:** Melakukan pengecekan dengan mengambil contoh buku dan melihat top-N buku paling mirip yang dihasilkan oleh masing-masing model.
- ![Screenshot 2025-06-12 224951](https://github.com/user-attachments/assets/1c5c6ed6-3efb-437e-aae2-ebd03b000c1d)
+---
 
-*   **Output:** Matriks kemiripan untuk CF dan CBF beserta mapping ID buku yang relevan, tersimpan di MinIO Gold Layer (`models/`).
-<!-- 
-### Tahap 4: Pengembangan API Backend (Orang 4)
-*   **(Sedang Berlangsung/Akan Dilakukan)**
-*   **Tujuan:** Membuat layanan API yang dapat diakses untuk mendapatkan rekomendasi.
-*   **Proses (`src/api/app.py`):**
-    1.  Menggunakan Flask sebagai framework.
-    2.  Saat startup, API akan memuat matriks kemiripan, mapping ID, dan data detail buku (dari Silver Layer) dari MinIO ke memori.
-    3.  Menyediakan endpoint, misalnya:
-        *   `GET /recommend/item-cf?book_asin=<ASIN>&top_n=<JUMLAH>`
-        *   `GET /recommend/content-based?book_asin=<ASIN>&top_n=<JUMLAH>`
-    4.  Mengembalikan hasil rekomendasi dalam format JSON.
-*   **Output:** Server API yang berjalan dan bisa memberikan rekomendasi.
+## 4. Alur Kerja & Pembagian Tugas Tim
 
-### Tahap 5: Pengembangan UI Frontend & Integrasi (Orang 5)
-*   **(Akan Dilakukan)**
-*   **Tujuan:** Membuat antarmuka pengguna sederhana agar pengguna bisa berinteraksi dan mendapatkan rekomendasi.
-*   **Proses (`src/ui/app_ui.py`):**
-    1.  Menggunakan Streamlit.
-    2.  Membuat input field bagi pengguna untuk memasukkan ASIN buku referensi.
-    3.  Mengirim request ke API backend yang dibuat Orang 4.
-    4.  Menampilkan hasil rekomendasi (termasuk judul, penulis, gambar sampul) kepada pengguna.
-    5.  Juga bertanggung jawab atas dokumentasi akhir dan integrasi keseluruhan.
-*   **Output:** Aplikasi web sederhana yang menampilkan rekomendasi buku.
--->
+### Orang 1: Infrastruktur Dasar & Ingestion Data Awal
+*   **Tugas:**
+    1.  Setup `docker-compose.yml` untuk Kafka, Zookeeper, MinIO.
+    2.  Membuat Kafka Producer (`kafka_producer_csv.py`) untuk membaca data CSV lokal dan mengirimkannya ke topic Kafka.
+    3.  Membuat Kafka Producer (`kafka_producer_unstructured.py`) untuk mengunggah file unstructured ke MinIO dan mengirim metadatanya ke topic Kafka.
+    4.  Membuat Kafka Consumer (`kafka_consumer_csv_to_minio.py`) untuk membaca data CSV dari Kafka dan menyimpannya ke bucket "raw data" di MinIO.
+    5.  Membuat Kafka Consumer (`kafka_consumer_unstructured_metadata.py`) untuk membaca metadata unstructured dari Kafka (misalnya, untuk logging).
+*   **Output:**
+    *   Infrastruktur Docker berjalan.
+    *   Data CSV mentah tersimpan di MinIO.
+    *   File unstructured tersimpan di MinIO dan metadatanya ter-log.
+*   **Script Utama:** `start_infra_ingestion.sh`
+*   **Dokumentasi**  
+![image](https://github.com/user-attachments/assets/410b9af7-e5cf-4141-aae0-949da70b25ba)
+![image](https://github.com/user-attachments/assets/f7377975-06f7-4d10-9bf6-822d6786d633)
 
-## 🛠️ Kebutuhan (Requirements)
 
-*   Python 3.9+
-*   Docker & Docker Compose
-*   Library Python (lihat `requirements.txt`):
-    *   `pandas`
-    *   `minio`
-    *   `numpy`
-    *   `scipy`
-    *   `scikit-learn`
-    *   `pyarrow` (untuk membaca/menulis Parquet)
-    *   `Flask` (untuk API)
-    *   `Flask-CORS` (untuk API)
-    *   `streamlit` (untuk UI)
-    *   (Tambahkan library lain jika ada)
 
-## 🚀 Cara Menjalankan Proyek (Secara Keseluruhan)
+### Orang 2: Data Processing & Feature Engineering
+*   **Tugas:**
+    1.  Memuat data CSV mentah dari MinIO (output Orang 1).
+    2.  Melakukan Exploratory Data Analysis (EDA).
+    3.  Melakukan preprocessing data (`data_preprocessor.py`): pembersihan, handling missing values, parsing tipe data (termasuk `authors_list`, `categories_list` menjadi list Python, `Id_rating` menjadi string), text cleaning (`description_cleaned`).
+    4.  Melakukan feature engineering (`feature_engineering_price.py`): membuat fitur baru (misal, `publish_year`, `num_authors`, `num_categories`), melakukan One-Hot Encoding untuk kategori.
+    5.  Membuat dan menyimpan model TF-IDF (`feature_engineering_recsys.py`) dari `description_cleaned` ke MinIO.
+    6.  Menyimpan DataFrame akhir yang komprehensif (berisi semua kolom asli yang relevan + fitur baru + fitur OHE) sebagai file Parquet (`price_prediction_features.parquet`) ke bucket "processed data" di MinIO.
+*   **Output:**
+    *   `processed-book-data/price_prediction_features.parquet` di MinIO.
+    *   `ml-models/tfidf_vectorizer.joblib` di MinIO.
+*   **Script Utama:** `process_data_pipeline.sh` (memanggil `src/processing/run_data_processing.py`)
+*   **Dokumentasi**   
+![image](https://github.com/user-attachments/assets/bb7294da-fdd6-4769-967f-99f63d2f4038)
+![image](https://github.com/user-attachments/assets/e78822e8-6cd4-485b-a9ba-9f3f7ce27d21)
 
-1.  **Siapkan Dataset Awal:**
-    Pastikan file `final_book_data_sample_20k.csv` ada di `data/processed/`. (Jika belum, jalankan skrip/notebook untuk membuatnya dari `data/raw/`).
 
-2.  **Buat dan Aktifkan Virtual Environment:**
+
+### Orang 3: Model Training (Prediksi Harga)
+*   **Tugas:**
+    1.  Memuat `price_prediction_features.parquet` (output Orang 2) dari MinIO.
+    2.  Memilih fitur (X) yang relevan (numerik dan OHE) dan target (y=`Price_rating`).
+    3.  Melatih model prediksi harga (dipilih Random Forest setelah eksperimen dengan XGBoost).
+    4.  Melakukan hyperparameter tuning (misalnya, menggunakan `GridSearchCV`).
+    5.  Mengevaluasi performa model terbaik.
+    6.  Menyimpan model terlatih (misal, `price_predictor_rf_focused_tuned.joblib`) dan metadatanya (termasuk `feature_names_ordered`, parameter, metrik evaluasi) ke bucket "ml-models" di MinIO dan ke `models_local_backup/`.
+*   **Output:**
+    *   `ml-models/price_predictor_rf_focused_tuned.joblib` (atau nama file model final) di MinIO.
+    *   `ml-models/price_predictor_rf_focused_tuned_metadata.json` di MinIO.
+    *   Salinan di `models_local_backup/`.
+    *   Notebook eksperimen model.
+*   **Script Utama:** `train_model_pipeline.sh` (memanggil `src/training/train_price_predictor.py`)
+*   **Dokumentasi**  
+![image](https://github.com/user-attachments/assets/463ca35b-4d16-4e1f-9641-ae5aaf7e55fb)  
+![image](https://github.com/user-attachments/assets/b97b4b2f-7424-46fd-96db-c50d709a85dd)
+
+
+### Orang 4: Pengembangan API Endpoint (Backend)
+*   **Tugas Utama:** Membangun backend API service yang akan melayani request dari frontend.
+*   **Detail Pekerjaan:**
+    1.  Mengembangkan API Service menggunakan FastAPI di `src/api/`.
+    2.  Mengimplementasikan logika startup API (`@app.on_event("startup")` di `main.py`) untuk memuat semua artefak yang dibutuhkan dari MinIO:
+        *   Model prediksi harga dan metadatanya.
+        *   Model TF-IDF vectorizer.
+        *   Data buku komprehensif (`price_prediction_features.parquet`) untuk layanan rekomendasi.
+    3.  Menginisialisasi service layer (`prediction_service.py`, `recommendation_service.py`) dengan artefak yang sudah dimuat.
+    4.  Mendefinisikan skema data Pydantic (`schemas.py`) untuk validasi request dan response API.
+    5.  Membuat endpoint-endpoint RESTful berikut (di `main.py` atau dipecah ke `routers/`):
+        *   `GET /health`: Cek status API.
+        *   `POST /predict/price`: Menerima fitur buku, mengembalikan prediksi harga.
+        *   `GET /books`: Mengembalikan daftar buku umum (dengan paginasi dan pencarian).
+        *   `GET /books/{book_id}`: Mengembalikan detail lengkap satu buku (termasuk prediksi harga internal, deskripsi asli, URL gambar, genre, dll.).
+        *   `GET /books/{book_id}/recommendations/initial`: Mengembalikan teaser rekomendasi yang dikategorikan (by author, genre, content, year range).
+        *   `GET /recommendations/by_author`, `/recommendations/by_genre`, `/recommendations/similar_to/{book_id}`, `/recommendations/by_year_range`: Mengembalikan daftar lengkap rekomendasi dengan paginasi.
+        *   (Opsional) Endpoint untuk statistik data (misal, `GET /statistics/genres`, `GET /statistics/publish_years`).
+        *   (Opsional) Endpoint untuk data evaluasi model (`GET /model/evaluation_results`).
+    6.  Mengimplementasikan error handling dan logging dasar di API.
+    7.  (Opsional) Membuat `Dockerfile.api` untuk containerisasi API.
+*   **Output Utama:**
+    *   API service yang berjalan dan dapat diuji (misalnya dengan Postman atau Swagger UI).
+    *   Dokumentasi API otomatis dari FastAPI.  
+![image](https://github.com/user-attachments/assets/75c444e3-9b39-481b-8135-4d1a4d42fb43)  
+
+    *   (Opsional) Image Docker untuk API.
+*   **Script Pendukung (Development Lokal):** Sebagian dari `start_api_streamlit.sh` atau perintah `uvicorn src.api.main:app --reload`.
+
+### Orang 5: Pengembangan Antarmuka Pengguna (Frontend Streamlit & Web Lanjutan)
+*   **Tugas Utama:** Membangun antarmuka pengguna (UI) yang interaktif untuk pengguna akhir.
+*   **Detail Pekerjaan:**
+    1.  **Pengembangan UI Streamlit Sederhana (`src/streamlit_app/app.py`):**
+        *   Membuat aplikasi web interaktif dasar menggunakan Streamlit.
+        *   Halaman Home: Menampilkan daftar buku (dari `GET /books`), fitur pencarian, dan informasi total buku (dari `GET /statistics/overview` atau `/books`).
+        *   Halaman Detail Buku: Menampilkan informasi lengkap buku (dari `GET /books/{book_id}`), termasuk gambar, deskripsi asli, genre (sebagai tag), prediksi harga, dan teaser rekomendasi (dari `GET /books/{book_id}/recommendations/initial`).
+        *   Halaman Daftar Rekomendasi Detail: Menampilkan daftar buku yang lebih panjang saat pengguna mengklik "Lihat Semua" dari teaser (memanggil endpoint `/recommendations/by_...` yang sesuai), lengkap dengan paginasi.
+        *   Halaman Prediktor Harga: Form untuk input manual fitur buku dan menampilkan prediksi harga (memanggil `POST /predict/price`).
+        *   Halaman Visualisasi Data: Menampilkan grafik-grafik (distribusi genre, tahun terbit, performa model) dengan data dari endpoint statistik API atau data evaluasi yang dimuat dari MinIO.
+        *   Semua interaksi UI melakukan panggilan ke endpoint API yang dibuat oleh Orang 4.
+    2.  **(Stretch Goal/Pengembangan Lanjutan) Frontend Web Interaktif (`frontend_web/`):**
+        *   Merancang dan mengembangkan antarmuka pengguna web yang lebih canggih menggunakan HTML, CSS, JavaScript, dan mungkin framework frontend (React, Vue, Angular) jika ada keahlian dan waktu.
+        *   Mengintegrasikan frontend ini dengan API.
+*   **Output Utama:**
+    *   Aplikasi Streamlit yang fungsional dan interaktif.
+    *   (Jika dikerjakan) Aplikasi frontend web yang lebih canggih.  
+ ![Screenshot 2025-06-19 083429](https://github.com/user-attachments/assets/f7f3d40d-007d-4e61-8117-57c10d745eab)
+*   **Script Pendukung (Development Lokal):** Sebagian dari `start_api_streamlit.sh` atau perintah `streamlit run src/streamlit_app/app.py`.
+
+---
+
+## 5. Cara Menjalankan Proyek
+
+### Prasyarat
+*   Docker Desktop terinstal dan **sedang berjalan**.
+*   Python 3 (misalnya, 3.9+) terinstal.
+*   Git terinstal.
+*   Postman atau alat serupa untuk menguji API (opsional).
+
+### Langkah-Langkah Setup Awal (Hanya Dilakukan Sekali)
+1.  **Clone Repository (jika dari GitHub):**
+    ```bash
+    git clone <url_repository_github>
+    cd final-project-data-lakehouse 
+    ```
+    Atau jika sudah punya folder proyek, cukup `cd` ke sana:
+    ```bash
+    cd path/to/your/final-project-data-lakehouse
+    ```
+2.  **Buat dan Aktifkan Virtual Environment (gunakan Git Bash atau terminal serupa):**
     ```bash
     python -m venv venv
-    # Windows:
-    venv\Scripts\activate
-    # macOS/Linux:
-    source venv/bin/activate
+    source venv/Scripts/activate  # Untuk Windows Git Bash
+    # source venv/bin/activate    # Untuk Linux/macOS
     ```
-
-3.  **Instal Dependencies:**
+    Pastikan prompt terminal berubah menjadi `(venv) ...`.
+3.  **Install Dependensi Python:**
     ```bash
     pip install -r requirements.txt
     ```
-
-4.  **Jalankan MinIO Server:**
+4.  **Beri Izin Eksekusi pada Script Bash (jika di Linux/macOS atau Git Bash):**
     ```bash
-    docker-compose up -d
+    chmod +x *.sh
+    # Atau spesifik:
+    # chmod +x start_infra_ingestion.sh process_data_pipeline.sh train_model_pipeline.sh start_api_streamlit.sh start_project.sh
     ```
-    Verifikasi MinIO Console di `http://localhost:9001` (login: `bigdatafp`/`bigdatafp` atau sesuai `docker-compose.yml`). Pastikan bucket `bronze-layer`, `silver-layer`, `gold-layer` ada.
 
-5.  **Jalankan Pipeline Data dan Pelatihan Model (Secara Berurutan):**
+### Menjalankan Komponen Proyek
+
+**Opsi 1: Menjalankan Semua Secara Otomatis dengan Script Utama (Jika `start_project.sh` sudah dibuat untuk orkestrasi penuh)**
+
+1.  Pastikan Docker Desktop berjalan.
+2.  Aktifkan venv: `source venv/Scripts/activate`
+3.  Jalankan script utama:
     ```bash
-    python src/ingest/ingest_to_bronze_streaming_batch.py
-    python src/preprocess/etl_bronze_to_silver.py
-    python src/preprocess/feature_engineering.py
-    python src/training/train_recommender_models.py
+    ./start_project.sh
     ```
-    Setelah setiap skrip, kamu bisa memeriksa hasilnya di MinIO Console.
-<!-- 
-7.  **Jalankan API Backend (Orang 4):**
-    (Biarkan terminal MinIO tetap berjalan atau jalankan MinIO di background)
+    Script ini akan mencoba menjalankan `docker-compose up`, lalu pipeline Orang 1, 2, 3, dan akhirnya API serta Streamlit.
+
+**Opsi 2: Menjalankan per Tahap (Direkomendasikan untuk Development & Debugging)**
+
+Pastikan Docker Desktop berjalan dan venv sudah aktif di setiap terminal yang akan menjalankan script Python/bash.
+
+1.  **Mulai Infrastruktur Docker (Kafka, MinIO, Zookeeper):**
+    Di terminal, dari root proyek:
     ```bash
-    python src/api/app.py
+    docker-compose up -d --build
     ```
-    API akan berjalan di `http://localhost:5000` (atau port yang dikonfigurasi).
+    Tunggu 30-60 detik hingga semua service siap. Cek dengan `docker ps`.
 
-8.  **Jalankan UI Frontend (Orang 5):**
-    (Biarkan terminal MinIO dan API tetap berjalan)
-    Buka terminal baru, aktifkan `venv`, lalu jalankan:
+2.  **Jalankan Pipeline Orang 1 (Ingestion Data Awal):**
+    (Pastikan `data/raw/books_dataset.csv` dan sampel unstructured sudah ada)
     ```bash
-    streamlit run src/ui/app_ui.py
+    ./start_infra_ingestion.sh
     ```
-    UI akan terbuka di browser, biasanya di `http://localhost:8501`.
+    Tunggu hingga selesai. Periksa MinIO bucket `raw-book-csv-data` dan `raw-book-unstructured-data`.
 
-9.  **Menghentikan Layanan:**
-    *   Untuk API dan UI, tekan `Ctrl+C` di terminal masing-masing.
-    *   Untuk MinIO: `docker-compose down`
+3.  **Jalankan Pipeline Orang 2 (Processing & Feature Engineering):**
+    ```bash
+    ./process_data_pipeline.sh
+    ```
+    Tunggu hingga selesai. Periksa MinIO bucket `processed-book-data` (harus ada `price_prediction_features.parquet`) dan `ml-models` (harus ada `tfidf_vectorizer.joblib`).
 
-## 🤝 Kontributor
-*   Orang 1 - [Nama Orang 1] - Data Ingest & ETL Awal
-*   Orang 2 - [Nama Orang 2] - Feature Engineering & Data Analyst
-*   Orang 3 - [Nama Orang 3] - Machine Learning Engineer
-*   Orang 4 - [Nama Orang 4] - Backend Developer (API)
-*   Orang 5 - [Nama Orang 5] - Frontend Developer (UI) & Project Integrator
--->
+4.  **Jalankan Pipeline Orang 3 (Model Training):**
+    ```bash
+    ./train_model_pipeline.sh
+    ```
+    Tunggu hingga selesai. Periksa MinIO bucket `ml-models` (harus ada model harga `.joblib` dan metadata `.json`).
+
+5.  **Jalankan API dan Aplikasi Streamlit (Orang 4):**
+    Gunakan script `start_api_streamlit.sh` atau jalankan secara manual:
+    *   **Terminal 1 (untuk API):**
+        ```bash
+        # (venv aktif)
+        uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+        ```
+    *   **Terminal 2 (untuk Streamlit):**
+        ```bash
+        # (venv aktif)
+        streamlit run src/streamlit_app/app.py --server.port 8501
+        ```
+    *   Akses API docs di `http://localhost:8000/docs`.
+    *   Akses Streamlit UI di `http://localhost:8501`.
+
+### Menghentikan Proyek
+
+1.  **Hentikan API dan Streamlit:** Tekan `Ctrl+C` di terminal masing-masing (atau di terminal `start_api_streamlit.sh` jika menggunakan script itu).
+2.  **Hentikan Service Docker:**
+    Di terminal, dari root proyek:
+    ```bash
+    docker-compose down
+    ```
+    Untuk menghapus volume data MinIO juga (PERHATIAN: DATA AKAN HILANG):
+    ```bash
+    docker-compose down -v
+    ```
+3.  **Nonaktifkan Virtual Environment (jika sudah selesai):**
+    ```bash
+    deactivate
+    ```
+
+---
+
+
+
+
+
+
+
