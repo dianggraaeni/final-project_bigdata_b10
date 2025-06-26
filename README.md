@@ -10,7 +10,7 @@ KELOMPOK : B10
 |Tsaldia Hukma Cita            | 5027231036 |
 | Calista Meyra Azizah         | 5027231060 |
 
-![image](https://github.com/user-attachments/assets/9a9f63ae-7e8d-458a-aadc-de3b591985e4)
+![Uploading WhatsApp Image 2025-06-24 at 18.13.52_e4d58119.jpg…]()
 
 ## 1. Pendahuluan: Permasalahan Nyata di Dunia Literasi Digital
 Era digital telah membuka akses tak terbatas terhadap jutaan judul buku. Namun, kelimpahan ini justru menghadirkan tantangan baru: pembaca seringkali kesulitan menemukan buku yang benar-benar sesuai minat di tengah lautan pilihan (information overload). Rekomendasi yang ada cenderung generik, membatasi penemuan karya baru atau "permata tersembunyi", dan kurang personal. Hal ini tidak hanya mempengaruhi kepuasan pembaca tetapi juga visibilitas penulis dan penerbit independen, serta mengurangi keterlibatan pengguna pada platform buku.
