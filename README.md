@@ -97,7 +97,7 @@ final-project-data-lakehouse/
 ├── requirements.txt
 └── README.md
 ```
-
+File berada pada: https://drive.google.com/file/d/11LaKHgJiVZnqK5vZVmhV6N26IO0w08jq/view (EXTRACT DAN BUKA DI VSCODE)
 ---
 
 ## 2. Penjelasan File & Folder Utama
