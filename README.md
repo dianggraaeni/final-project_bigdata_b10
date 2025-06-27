@@ -19,7 +19,7 @@ Era digital telah membuka akses tak terbatas terhadap jutaan judul buku. Namun, 
 ## 2. Solusi yang Ditawarkan: Sistem Rekomendasi Buku Cerdas
 Untuk menjawab tantangan dalam menemukan bacaan yang relevan di era digital, proyek mengembangkan prototipe sistem rekomendasi buku yang lebih personal dan cerdas. Solusi kami berfokus pada pemahaman mendalam terhadap preferensi pengguna dan esensi konten buku. Dengan menganalisis histori interaksi pengguna (seperti rating) serta memanfaatkan metadata buku (judul, penulis, deskripsi, dan genre), kami mengimplementasikan model rekomendasi yang efektif, menggabungkan pendekatan Collaborative Filtering (berdasarkan kemiripan pola rating antar buku) dan Content-Based Filtering (berdasarkan kemiripan konten buku).
 
-Seluruh proses ini didukung oleh arsitektur Data Lakehouse sederhana menggunakan MinIO sebagai object storage, yang mengelola data secara fleksibel mulai dari ingesti data sampel secara batch, pemrosesan melalui layer Bronze dan Silver, hingga penyimpanan fitur dan model siap pakai di layer Gold. Hasil rekomendasi dari sistem ini kemudian akan disajikan melalui sebuah API backend, yang memungkinkan integrasi mudah dengan antarmuka pengguna dan aplikasi lainnya. Fokus utama proyek ini adalah membangun pipeline data dan model rekomendasi inti yang fungsional sebagai dasar pengembangan lebih lanjut.
+Seluruh proses ini didukung oleh arsitektur Data Lakehouse sederhana menggunakan MinIO sebagai object storage, yang mengelola data secara fleksibel mulai dari ingesti data sampel secara batch, pemrosesan, hingga penyimpanan fitur dan model siap pakai. Hasil rekomendasi dari sistem ini kemudian akan disajikan melalui sebuah API backend, yang memungkinkan integrasi mudah dengan antarmuka pengguna dan aplikasi lainnya. Fokus utama proyek ini adalah membangun pipeline data dan model rekomendasi inti yang fungsional sebagai dasar pengembangan lebih lanjut.
 
 ## 3. Dataset yang Digunakan
 
@@ -29,8 +29,8 @@ Seluruh proses ini didukung oleh arsitektur Data Lakehouse sederhana menggunakan
     1.  `Books_rating.csv`: Mengandung data rating, User ID, ID Buku (ASIN), timestamp, dan teks review.
     2.  `books_data.csv`: Mengandung metadata buku seperti judul, penulis, deskripsi, kategori, dll.
 *   **Pengolahan Awal (Sampling & Penggabungan):**
-    *   Kami mengambil sampel acak **20.000 baris rating** dari `Books_rating.csv`.
-    *   Sampel ini digabungkan dengan `books_data.csv` berdasarkan normalisasi judul buku. Hasilnya adalah file `final_book_data_sample_20k.csv` yang menjadi input awal untuk pipeline kami.
+    *   Kami mengambil sampel acak **50.000 baris rating** dari `Books_rating.csv`.
+    *   Sampel ini digabungkan dengan `books_data.csv` berdasarkan normalisasi judul buku. Hasilnya adalah file `final_book_data_sample_50k.csv` yang menjadi input awal untuk pipeline kami.
 
 ## 4. Struktur Direktori Proyek
 ```
@@ -115,7 +115,6 @@ final-project-data-lakehouse/
         *   `main.py`: Aplikasi FastAPI utama, event startup, dan pendaftaran router (jika digunakan).
         *   `schemas.py`: Model data Pydantic untuk validasi dan dokumentasi API.
         *   `services/`: Logika bisnis inti (prediksi, rekomendasi) yang dipisahkan dari endpoint.
-        *   `routers/` (Opsional): Jika endpoint dipecah menjadi modul terpisah.
     *   **`streamlit_app/`**: Kode untuk aplikasi UI sederhana menggunakan Streamlit. `app.py` adalah script utama.
     *   **`utils/`**: Modul utilitas umum.
         *   `config.py`: Menyimpan konfigurasi (nama bucket, file, dll.).
@@ -138,7 +137,6 @@ final-project-data-lakehouse/
 *   **API Framework:** FastAPI
 *   **ASGI Server (untuk FastAPI):** Uvicorn
 *   **Simple Web UI:** Streamlit
-*   **Frontend Web (Orang 5):** HTML, CSS, JavaScript (Framework seperti React/Vue/Angular opsional
 
 ---
 
@@ -158,7 +156,8 @@ final-project-data-lakehouse/
 *   **Script Utama:** `start_infra_ingestion.sh`
 *   **Dokumentasi**  
 ![image](https://github.com/user-attachments/assets/410b9af7-e5cf-4141-aae0-949da70b25ba)
-![image](https://github.com/user-attachments/assets/f7377975-06f7-4d10-9bf6-822d6786d633)
+![WhatsApp Image 2025-06-27 at 16 14 42_766d6481](https://github.com/user-attachments/assets/6d2684b5-8481-4ba3-b82d-bc4cd3e6a1c0)
+
 
 
 
@@ -166,7 +165,7 @@ final-project-data-lakehouse/
 *   **Tugas:**
     1.  Memuat data CSV mentah dari MinIO (output Orang 1).
     2.  Melakukan Exploratory Data Analysis (EDA).
-    3.  Melakukan preprocessing data (`data_preprocessor.py`): pembersihan, handling missing values, parsing tipe data (termasuk `authors_list`, `categories_list` menjadi list Python, `Id_rating` menjadi string), text cleaning (`description_cleaned`).
+    3.  Melakukan preprocessing data (`data_preprocessor.py`): pembersihan, handling missing values dengan menghapus baris data yang memiliki nilai null, parsing tipe data (termasuk `authors_list`, `categories_list` menjadi list Python, `Id_rating` menjadi string), text cleaning (`description_cleaned`).
     4.  Melakukan feature engineering (`feature_engineering_price.py`): membuat fitur baru (misal, `publish_year`, `num_authors`, `num_categories`), melakukan One-Hot Encoding untuk kategori.
     5.  Membuat dan menyimpan model TF-IDF (`feature_engineering_recsys.py`) dari `description_cleaned` ke MinIO.
     6.  Menyimpan DataFrame akhir yang komprehensif (berisi semua kolom asli yang relevan + fitur baru + fitur OHE) sebagai file Parquet (`price_prediction_features.parquet`) ke bucket "processed data" di MinIO.
@@ -185,18 +184,19 @@ final-project-data-lakehouse/
     1.  Memuat `price_prediction_features.parquet` (output Orang 2) dari MinIO.
     2.  Memilih fitur (X) yang relevan (numerik dan OHE) dan target (y=`Price_rating`).
     3.  Melatih model prediksi harga (dipilih Random Forest setelah eksperimen dengan XGBoost).
-    4.  Melakukan hyperparameter tuning (misalnya, menggunakan `GridSearchCV`).
+    4.  Melakukan hyperparameter tuning (menggunakan `GridSearchCV`).
     5.  Mengevaluasi performa model terbaik.
-    6.  Menyimpan model terlatih (misal, `price_predictor_rf_focused_tuned.joblib`) dan metadatanya (termasuk `feature_names_ordered`, parameter, metrik evaluasi) ke bucket "ml-models" di MinIO dan ke `models_local_backup/`.
+    6.  Menyimpan model terlatih (`price_predictor_rf_focused_tuned.joblib`) dan metadatanya (termasuk `feature_names_ordered`, parameter, metrik evaluasi) ke bucket "ml-models" di MinIO dan ke `models_local_backup/`.
 *   **Output:**
-    *   `ml-models/price_predictor_rf_focused_tuned.joblib` (atau nama file model final) di MinIO.
+    *   `ml-models/price_predictor_rf_focused_tuned.joblib` di MinIO.
     *   `ml-models/price_predictor_rf_focused_tuned_metadata.json` di MinIO.
     *   Salinan di `models_local_backup/`.
     *   Notebook eksperimen model.
 *   **Script Utama:** `train_model_pipeline.sh` (memanggil `src/training/train_price_predictor.py`)
 *   **Dokumentasi**  
-![image](https://github.com/user-attachments/assets/463ca35b-4d16-4e1f-9641-ae5aaf7e55fb)  
-![image](https://github.com/user-attachments/assets/b97b4b2f-7424-46fd-96db-c50d709a85dd)
+![image](https://github.com/user-attachments/assets/463ca35b-4d16-4e1f-9641-ae5aaf7e55fb)
+![WhatsApp Image 2025-06-27 at 16 14 43_c7ba115a](https://github.com/user-attachments/assets/bb649346-2c1a-46fa-9176-0373eb0837e2)
+
 
 
 ### Orang 4: Pengembangan API Endpoint (Backend)
@@ -209,23 +209,19 @@ final-project-data-lakehouse/
         *   Data buku komprehensif (`price_prediction_features.parquet`) untuk layanan rekomendasi.
     3.  Menginisialisasi service layer (`prediction_service.py`, `recommendation_service.py`) dengan artefak yang sudah dimuat.
     4.  Mendefinisikan skema data Pydantic (`schemas.py`) untuk validasi request dan response API.
-    5.  Membuat endpoint-endpoint RESTful berikut (di `main.py` atau dipecah ke `routers/`):
+    5.  Membuat endpoint-endpoint RESTful berikut (di `main.py`):
         *   `GET /health`: Cek status API.
         *   `POST /predict/price`: Menerima fitur buku, mengembalikan prediksi harga.
         *   `GET /books`: Mengembalikan daftar buku umum (dengan paginasi dan pencarian).
         *   `GET /books/{book_id}`: Mengembalikan detail lengkap satu buku (termasuk prediksi harga internal, deskripsi asli, URL gambar, genre, dll.).
         *   `GET /books/{book_id}/recommendations/initial`: Mengembalikan teaser rekomendasi yang dikategorikan (by author, genre, content, year range).
         *   `GET /recommendations/by_author`, `/recommendations/by_genre`, `/recommendations/similar_to/{book_id}`, `/recommendations/by_year_range`: Mengembalikan daftar lengkap rekomendasi dengan paginasi.
-        *   (Opsional) Endpoint untuk statistik data (misal, `GET /statistics/genres`, `GET /statistics/publish_years`).
-        *   (Opsional) Endpoint untuk data evaluasi model (`GET /model/evaluation_results`).
     6.  Mengimplementasikan error handling dan logging dasar di API.
-    7.  (Opsional) Membuat `Dockerfile.api` untuk containerisasi API.
 *   **Output Utama:**
-    *   API service yang berjalan dan dapat diuji (misalnya dengan Postman atau Swagger UI).
+    *   API service yang berjalan dan dapat diuji (misalnya dengan Postman dan Swagger UI).
     *   Dokumentasi API otomatis dari FastAPI.  
 ![image](https://github.com/user-attachments/assets/75c444e3-9b39-481b-8135-4d1a4d42fb43)  
 
-    *   (Opsional) Image Docker untuk API.
 *   **Script Pendukung (Development Lokal):** Sebagian dari `start_api_streamlit.sh` atau perintah `uvicorn src.api.main:app --reload`.
 
 ### Orang 5: Pengembangan Antarmuka Pengguna (Frontend Streamlit & Web Lanjutan)
@@ -246,7 +242,9 @@ final-project-data-lakehouse/
     *   Aplikasi Streamlit yang fungsional dan interaktif.
     *   (Jika dikerjakan) Aplikasi frontend web yang lebih canggih.  
  ![Screenshot 2025-06-19 083429](https://github.com/user-attachments/assets/f7f3d40d-007d-4e61-8117-57c10d745eab)
-*   **Script Pendukung (Development Lokal):** Sebagian dari `start_api_streamlit.sh` atau perintah `streamlit run src/streamlit_app/app.py`.
+![WhatsApp Image 2025-06-27 at 16 14 43_bfe97d7b](https://github.com/user-attachments/assets/26c287ed-4f8b-44cc-b314-db2c8f8490e8)
+![WhatsApp Image 2025-06-27 at 16 14 43_a605b7e6](https://github.com/user-attachments/assets/e015321f-ca36-4479-9106-af51d036192c)  
+
 
 ---
 
@@ -256,7 +254,7 @@ final-project-data-lakehouse/
 *   Docker Desktop terinstal dan **sedang berjalan**.
 *   Python 3 (misalnya, 3.9+) terinstal.
 *   Git terinstal.
-*   Postman atau alat serupa untuk menguji API (opsional).
+*   Postman atau alat serupa untuk menguji API
 
 ### Langkah-Langkah Setup Awal (Hanya Dilakukan Sekali)
 1.  **Clone Repository (jika dari GitHub):**
@@ -281,9 +279,7 @@ final-project-data-lakehouse/
     ```
 4.  **Beri Izin Eksekusi pada Script Bash (jika di Linux/macOS atau Git Bash):**
     ```bash
-    chmod +x *.sh
-    # Atau spesifik:
-    # chmod +x start_infra_ingestion.sh process_data_pipeline.sh train_model_pipeline.sh start_api_streamlit.sh start_project.sh
+    chmod +x run_all_pipelines.sh
     ```
 
 ### Menjalankan Komponen Proyek
@@ -294,77 +290,7 @@ final-project-data-lakehouse/
 2.  Aktifkan venv: `source venv/Scripts/activate`
 3.  Jalankan script utama:
     ```bash
-    ./start_project.sh
+    ./run_all_pipelines.sh
     ```
     Script ini akan mencoba menjalankan `docker-compose up`, lalu pipeline Orang 1, 2, 3, dan akhirnya API serta Streamlit.
-
-**Opsi 2: Menjalankan per Tahap (Direkomendasikan untuk Development & Debugging)**
-
-Pastikan Docker Desktop berjalan dan venv sudah aktif di setiap terminal yang akan menjalankan script Python/bash.
-
-1.  **Mulai Infrastruktur Docker (Kafka, MinIO, Zookeeper):**
-    Di terminal, dari root proyek:
-    ```bash
-    docker-compose up -d --build
-    ```
-    Tunggu 30-60 detik hingga semua service siap. Cek dengan `docker ps`.
-
-2.  **Jalankan Pipeline Orang 1 (Ingestion Data Awal):**
-    (Pastikan `data/raw/books_dataset.csv` dan sampel unstructured sudah ada)
-    ```bash
-    ./start_infra_ingestion.sh
-    ```
-    Tunggu hingga selesai. Periksa MinIO bucket `raw-book-csv-data` dan `raw-book-unstructured-data`.
-
-3.  **Jalankan Pipeline Orang 2 (Processing & Feature Engineering):**
-    ```bash
-    ./process_data_pipeline.sh
-    ```
-    Tunggu hingga selesai. Periksa MinIO bucket `processed-book-data` (harus ada `price_prediction_features.parquet`) dan `ml-models` (harus ada `tfidf_vectorizer.joblib`).
-
-4.  **Jalankan Pipeline Orang 3 (Model Training):**
-    ```bash
-    ./train_model_pipeline.sh
-    ```
-    Tunggu hingga selesai. Periksa MinIO bucket `ml-models` (harus ada model harga `.joblib` dan metadata `.json`).
-
-5.  **Jalankan API dan Aplikasi Streamlit (Orang 4):**
-    Gunakan script `start_api_streamlit.sh` atau jalankan secara manual:
-    *   **Terminal 1 (untuk API):**
-        ```bash
-        # (venv aktif)
-        uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
-        ```
-    *   **Terminal 2 (untuk Streamlit):**
-        ```bash
-        # (venv aktif)
-        streamlit run src/streamlit_app/app.py --server.port 8501
-        ```
-    *   Akses API docs di `http://localhost:8000/docs`.
-    *   Akses Streamlit UI di `http://localhost:8501`.
-
-### Menghentikan Proyek
-
-1.  **Hentikan API dan Streamlit:** Tekan `Ctrl+C` di terminal masing-masing (atau di terminal `start_api_streamlit.sh` jika menggunakan script itu).
-2.  **Hentikan Service Docker:**
-    Di terminal, dari root proyek:
-    ```bash
-    docker-compose down
-    ```
-    Untuk menghapus volume data MinIO juga (PERHATIAN: DATA AKAN HILANG):
-    ```bash
-    docker-compose down -v
-    ```
-3.  **Nonaktifkan Virtual Environment (jika sudah selesai):**
-    ```bash
-    deactivate
-    ```
-
 ---
-
-
-
-
-
-
-
