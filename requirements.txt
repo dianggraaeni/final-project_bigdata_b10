@@ -1,0 +1,15 @@
+kafka-python
+minio
+pandas
+nltk
+scikit-learn
+joblib
+pyarrow
+xgboost
+fastapi
+uvicorn[standard] # Server untuk FastAPI
+streamlit
+requests # Untuk Streamlit memanggil API
+python-multipart # Dibutuhkan FastAPI untuk beberapa hal, aman untuk ditambahkan
+plotly
+statsmodels
